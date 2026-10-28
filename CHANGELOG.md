@@ -2,6 +2,19 @@
 
 All notable changes to the Epigrass QGIS plugin are documented here.
 
+## 0.1.1 — 2026-10-28
+
+Security hardening (static-analysis clean):
+
+- SQLite result-table names are validated and properly quoted before
+  building queries (`sqlite_utils.quoted_identifier`).
+- Model names derived from layer names are sanitized (they flow into
+  output directories and SQLite table names).
+- Python interpreter candidates are resolved to absolute paths via
+  `shutil.which` before execution (PATH-hijacking protection).
+- All subprocess call sites audited: argv lists only, no shell, no
+  user-controlled strings; annotated accordingly (`bandit` clean).
+
 ## 0.1.0 — 2026-10-28
 
 Initial release.

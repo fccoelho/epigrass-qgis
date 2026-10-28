@@ -12,7 +12,7 @@ about=Epigrass for QGIS brings the Epigrass metapopulation simulation engine int
  * Run the simulation with epirunner in an isolated Python environment managed by the plugin (QGIS's own Python is never touched)
  * Watch the epidemic spread on your map: results are loaded back as styled GeoPackage layers and an animated temporal layer for the QGIS Temporal Controller
  The plugin requires a one-time setup ("Environment Doctor") which provisions a dedicated Python >= 3.12 environment with Epigrass and checks that a Redis server (required by the Epigrass engine) is reachable, starting one automatically when possible.
-version=0.1.0
+version=0.1.1
 author=Flavio Codeco Coelho
 email=fccoelho@gmail.com
 tracker=https://github.com/fccoelho/epigrass-qgis/issues
@@ -23,4 +23,4 @@ icon=icons/egicon.png
 category=Analysis
 tags=epidemiology,health,modelling,sir,seir,simulation,metapopulation,spatial analysis
 experimental=True
-changelog=0.1.0 - Initial release: Environment Doctor, model builder wizard, simulation runner, results loading with temporal animation.
+changelog=0.1.1 - Security hardening: SQLite identifier quoting, model-name sanitization, subprocess path resolution (audit clean under bandit). 0.1.0 - Initial release: Environment Doctor, model builder wizard, simulation runner, results loading with temporal animation.
