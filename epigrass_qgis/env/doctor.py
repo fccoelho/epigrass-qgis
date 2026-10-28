@@ -144,11 +144,26 @@ class Doctor:
             venv_dir = os.path.expanduser(self.config.env_dir)
             if python_env.create_venv(self.python_cmd, venv_dir, on_line) != 0:
                 log.error("venv creation failed")
-            else:
-                if not python_env.epigrass_version(venv_dir):
+            elif not python_env.epigrass_version(venv_dir):
+                rc = python_env.pip_install(venv_dir, ("epigrass",), on_line=on_line)
+                if rc != 0 and self._venv_python_mismatch(venv_dir):
+                    # The existing venv was built with an interpreter whose
+                    # dependency wheels are unavailable (e.g. fiona on a very
+                    # new Python). Rebuild with the preferred one and retry.
+                    if on_line:
+                        on_line("Rebuilding the managed environment with a more "
+                                "compatible interpreter...")
+                    python_env.remove_venv(venv_dir)
+                    python_env.create_venv(self.python_cmd, venv_dir, on_line)
                     python_env.pip_install(venv_dir, ("epigrass",), on_line=on_line)
         self._ensure_redis(on_line)
         return self.check_all()
+
+    def _venv_python_mismatch(self, venv_dir) -> bool:
+        """True when the venv's Python differs from the preferred interpreter."""
+        venv_version = python_env.interpreter_version(
+            python_env.venv_python_path(venv_dir))
+        return bool(venv_version) and venv_version != self.python_version
 
     def install_epigrass(self, on_line=None) -> int:
         """(Re)install Epigrass in the managed venv. Returns pip exit code."""

@@ -2,6 +2,23 @@
 
 All notable changes to the Epigrass QGIS plugin are documented here.
 
+## 0.1.2 — 2026-10-28
+
+Environment Doctor fixes:
+
+- **Fixed**: Python discovery never succeeded — the version probe printed
+  `sys.version` (bare `3.12.7 (...)`) but the parser expected
+  `Python 3.12.7`. Probes now run `python --version` and the parser accepts
+  both formats; guarded by real end-to-end probe tests.
+- Interpreter preference now favours Python 3.12 then 3.13 (widest wheel
+  availability for Epigrass dependencies) over the newest system Python,
+  and discovers **uv-managed interpreters** (`~/.local/share/uv/python`)
+  even when they are not on PATH.
+- The managed environment is rebuilt automatically if it was created with
+  a Python for which Epigrass dependencies cannot be installed.
+- Child-process probes run with a sanitised environment (QGIS's
+  `PYTHONHOME`/`PYTHONPATH` cannot break discovery).
+
 ## 0.1.1 — 2026-10-28
 
 Security hardening (static-analysis clean):

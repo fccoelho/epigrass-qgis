@@ -21,7 +21,31 @@ from ..defs import MIN_PYTHON
 
 log = logging.getLogger(__name__)
 
-_VERSION_RE = re.compile(r"Python (\d+)\.(\d+)(?:\.(\d+))?")
+# Accepts both "Python 3.12.7" (python --version) and the bare "3.12.7 (...)"
+# that `sys.version` starts with.
+_VERSION_RE = re.compile(r"^(?:Python\s+)?(\d+)\.(\d+)(?:\.(\d+))?")
+
+
+def parse_python_version(text: str):
+    """Extract a (major, minor) tuple from *text*.
+
+    Handles both ``python --version`` output ('Python 3.12.7') and a bare
+    '3.12.7 (...)' as printed by ``sys.version``.
+    """
+    m = _VERSION_RE.match((text or "").strip())
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def probe_env() -> dict:
+    """Environment for child interpreter probes.
+
+    Drops PYTHONHOME/PYTHONPATH so that a QGIS-mangled environment cannot
+    break the very interpreters we are trying to discover.
+    """
+    env = os.environ.copy()
+    env.pop("PYTHONHOME", None)
+    env.pop("PYTHONPATH", None)
+    return env
 
 
 class StreamedCommand:
@@ -64,7 +88,7 @@ class StreamedCommand:
                 except Exception:
                     log.exception("Output callback failed")
             else:
-                log.debug("pip: %s", line.rstrip())
+                log.debug("cmd: %s", line.rstrip())
 
     def cancel(self) -> None:
         self._cancelled.set()
@@ -73,12 +97,6 @@ class StreamedCommand:
                 self._proc.terminate()
             except OSError:
                 pass
-
-
-def parse_python_version(text: str):
-    """Extract a (major, minor) tuple from *text* (e.g. 'Python 3.12.7')."""
-    m = _VERSION_RE.search(text or "")
-    return (int(m.group(1)), int(m.group(2))) if m else None
 
 
 def resolve_executable(name: str) -> str:
@@ -98,8 +116,9 @@ def check_interpreter(path: str, timeout: float = 15.0):
         return None
     try:
         out = subprocess.run(  # nosec B603 - fixed argv, resolved absolute path
-            [resolved, "-c", "import sys; print(sys.version)"],
+            [resolved, "--version"],
             capture_output=True, text=True, timeout=timeout, errors="replace",
+            env=probe_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -112,22 +131,52 @@ def is_sufficient(version) -> bool:
     return bool(version) and version >= MIN_PYTHON
 
 
+def uv_managed_pythons(minor: int, base_dir: str | None = None) -> list:
+    """Absolute paths of uv-managed CPython 3.<minor> interpreters, if any.
+
+    uv installs self-contained CPythons under ``~/.local/share/uv/python``
+    (POSIX) or ``%APPDATA%\\uv\\python`` (Windows).  These are invisible to
+    PATH-based probing but are exactly what we want: no system GDAL needed,
+    wide wheel availability.
+    """
+    if base_dir is None:
+        if os.name == "nt":
+            base = Path(os.environ.get("APPDATA", "")) / "uv" / "python"
+        else:
+            base = Path.home() / ".local" / "share" / "uv" / "python"
+    else:
+        base = Path(base_dir)
+    if not base.is_dir():
+        return []
+    found = []
+    for pattern, _binname in (("cpython-3.*.*/bin/python3", "python3"),
+                             ("cpython-3.*/python.exe", "python.exe")):
+        for interp in sorted(base.glob(pattern)):
+            if f"3.{minor}" in str(interp) and os.access(interp, os.X_OK):
+                found.append([str(interp)])
+    return found
+
+
 def candidate_interpreters() -> list:
-    """Interpreter command lines worth probing, most preferred first."""
+    """Interpreter command lines worth probing, most preferred first.
+
+    Order matters: 3.12 is preferred over newer interpreters because Epigrass
+    dependency wheels (fiona, shapely, numpy...) are widest there.
+    """
+    minors = (12, 13, 14)
     cands = []
     if sys.platform == "win32":
-        # Windows: py launcher supports explicit versions
-        for minor in (13, 12):
-            cands.append(["py", f"-{MIN_PYTHON[0]}.{minor}"])
+        for minor in minors:
+            cands.append(["py", f"-3.{minor}"])
         cands.append(["python"])
     else:
-        for minor in (14, 13, 12):
-            cands.append([f"python{MIN_PYTHON[0]}.{minor}"])
+        for minor in minors:
+            cands.append([f"python3.{minor}"])
+            cands += uv_managed_pythons(minor)
         cands.append(["python3"])
         cands.append(["python"])
-    for uv in ("uv",):
-        if shutil.which(uv):
-            cands.append([uv, "run", "python"])
+    if shutil.which("uv"):
+        cands.append(["uv", "run", "python"])
     return cands
 
 
@@ -153,12 +202,16 @@ def _check_cmd(cmd: list):
         return None
     try:
         out = subprocess.run(  # nosec B603 - fixed argv, resolved absolute path
-            [*resolved_cmd, "-c", "import sys; print(sys.version)"],
+            [*resolved_cmd, "--version"],
             capture_output=True, text=True, timeout=15, errors="replace",
+            env=probe_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    return parse_python_version(out.stdout) if out.returncode == 0 else None
+    if out.returncode != 0:
+        return None
+    # Some tools print the version on stderr; try both.
+    return parse_python_version(out.stdout) or parse_python_version(out.stderr)
 
 
 def shlex_split(text: str) -> list:
@@ -198,10 +251,8 @@ def pip_install(venv_dir, packages=("epigrass",), upgrade: bool = True,
 
 def _pip_env() -> dict:
     """Environment for pip runs (ensure user site-packages do not leak)."""
-    env = os.environ.copy()
+    env = probe_env()
     env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
-    env.pop("PYTHONHOME", None)
-    env.pop("PYTHONPATH", None)
     return env
 
 
@@ -212,6 +263,15 @@ def epirunner_path(venv_dir) -> str:
     return str(venv_dir / "bin" / "epirunner")
 
 
+def remove_venv(venv_dir) -> None:
+    shutil.rmtree(venv_dir, ignore_errors=True)
+
+
+def interpreter_version(python_path: str):
+    """(major, minor) of *python_path*, or None."""
+    return check_interpreter(python_path)
+
+
 def epigrass_version(venv_dir) -> str:
     """Return the installed Epigrass version, or '' if not installed."""
     python = venv_python_path(venv_dir)
@@ -220,6 +280,7 @@ def epigrass_version(venv_dir) -> str:
             [python, "-c",
              "from importlib.metadata import version; print(version('epigrass'))"],
             capture_output=True, text=True, timeout=30, errors="replace",
+            env=probe_env(),
         )
     except (OSError, subprocess.SubprocessError):
         return ""

@@ -1,5 +1,7 @@
 """Tests for disease presets and env helper functions (pure Python)."""
 
+import sys
+
 from epigrass_qgis.builder import presets
 from epigrass_qgis.env import python_env, redis_service
 from epigrass_qgis.writer.epg_writer import ModelSpec, render_epg
@@ -25,7 +27,31 @@ def test_presets_are_complete_and_evaluable():
 def test_parse_python_version():
     assert python_env.parse_python_version("Python 3.12.7") == (3, 12)
     assert python_env.parse_python_version("Python 3.13.1 (main)") == (3, 13)
+    # bare `sys.version` output (no "Python" prefix) must parse too
+    assert python_env.parse_python_version(
+        "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 13]") == (3, 14)
+    assert python_env.parse_python_version("3.12.9") == (3, 12)
     assert python_env.parse_python_version("no version here") is None
+    assert python_env.parse_python_version("") is None
+    assert python_env.parse_python_version(None) is None
+
+
+def test_check_interpreter_real_interpreter():
+    """Integration-flavoured: probe the actually running interpreter.
+
+    This guards the full probe pipeline (resolve -> run -> parse), which an
+    isolated parse test cannot do.
+    """
+    version = python_env.check_interpreter(sys.executable)
+    assert version is not None
+    assert version >= (3, 10)
+    assert python_env.is_sufficient(version) or not python_env.is_sufficient(version)
+
+
+def test_find_python_finds_something_usable():
+    cmd, version = python_env.find_python("")
+    assert cmd is not None, "no Python >= 3.12 discoverable on this machine"
+    assert version >= python_env.MIN_PYTHON
 
 
 def test_is_sufficient():
