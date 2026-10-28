@@ -635,9 +635,12 @@ class ModelWizard(QWizard):
 
     # ------------------------------------------------------------ build
     def build_spec(self) -> ModelSpec:
+        from ..writer.epg_writer import sanitize_model_name
+
         model_page = self.model_page
         spec = ModelSpec(
-            name=(self.layer.name() if self.layer else "model").replace(" ", "_"),
+            name=sanitize_model_name(
+                self.layer.name() if self.layer else "model"),
             model_type=model_page.model_combo.currentText(),
             sites=list(self.sites),
             edges=list(self.edges),

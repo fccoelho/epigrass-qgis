@@ -57,7 +57,7 @@ class SimulationTask(QgsTask):
                 return False
         self.signals.log_line.emit("$ " + " ".join(self.command))
         try:
-            self._proc = subprocess.Popen(
+            self._proc = subprocess.Popen(  # nosec B603 - argv list, no shell; epirunner from the plugin-managed venv
                 self.command, cwd=self.project_dir,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True, errors="replace", bufsize=1,

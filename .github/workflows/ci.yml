@@ -21,6 +21,8 @@ jobs:
         run: uv sync --group dev
       - name: Lint
         run: uv run ruff check .
+      - name: Security scan
+        run: uv run bandit -c pyproject.toml -r epigrass_qgis
       - name: Unit tests
         run: uv run pytest -m "not integration"
 

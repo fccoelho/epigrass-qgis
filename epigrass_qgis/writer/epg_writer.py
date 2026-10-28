@@ -18,6 +18,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -25,6 +26,20 @@ log = logging.getLogger(__name__)
 
 SITES_HEADER = ["lat", "long", "City", "Pop", "Geocode"]
 EDGES_HEADER = ["Source", "Dest", "flowSD", "flowDS", "Distance", "geoSource", "geoDest"]
+
+#: characters kept when deriving file/table-safe model names from layer names
+_MODEL_NAME_BAD = re.compile(r"[^A-Za-z0-9_\-]+")
+
+
+def sanitize_model_name(name: str) -> str:
+    """Reduce *name* to something safe for file names, SQLite tables and .epg.
+
+    The model name flows into the output directory name (``outdata-<name>``)
+    and the SQLite result table name, so anything outside ASCII letters,
+    digits, underscore and dash is replaced.
+    """
+    cleaned = _MODEL_NAME_BAD.sub("_", (name or "").strip())
+    return cleaned.strip("_-") or "model"
 
 _EPG_TEMPLATE = """################################################################
 #  EPIGRASS - Model definition                                 #

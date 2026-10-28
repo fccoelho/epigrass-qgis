@@ -27,6 +27,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QDate
 
+from ..sqlite_utils import quoted_identifier
+
 log = logging.getLogger(__name__)
 
 #: Date assigned to simulation step 0 (arbitrary, purely for visualisation).
@@ -57,9 +59,10 @@ def build_temporal_layer(project: QgsProject, outdir: str, model_name: str):
         return None
     con = sqlite3.connect(sqlite_path)
     try:
-        columns = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
+        ident = quoted_identifier(table)
+        columns = [c[1] for c in con.execute(f"PRAGMA table_info({ident})")]
         rows = con.execute(
-            f'SELECT * FROM "{table}" ORDER BY geocode, time'
+            f"SELECT * FROM {ident} ORDER BY geocode, time"  # nosec B608 - identifier validated+quoted by quoted_identifier()
         ).fetchall()
     finally:
         con.close()

@@ -37,7 +37,7 @@ class StreamedCommand:
 
     def run(self, on_line=None, timeout: float | None = None) -> int:
         log.debug("Running: %s", self.cmd)
-        self._proc = subprocess.Popen(
+        self._proc = subprocess.Popen(  # nosec B603 - argv list, no shell; interpreter/path resolved locally
             self.cmd, cwd=self.cwd, env=self.env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             universal_newlines=True, errors="replace", bufsize=1,
@@ -53,7 +53,8 @@ class StreamedCommand:
         return self.returncode
 
     def _pump(self, on_line):
-        assert self._proc and self._proc.stdout
+        if not (self._proc and self._proc.stdout):
+            return
         for line in self._proc.stdout:
             if self._cancelled.is_set():
                 break
@@ -80,11 +81,24 @@ def parse_python_version(text: str):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+def resolve_executable(name: str) -> str:
+    """Return the absolute path of *name* on PATH (empty string if not found).
+
+    Pinning the resolved absolute path protects against PATH hijacking
+    between discovery and execution.
+    """
+    return shutil.which(name) or (name if os.path.isabs(name) and
+                                  os.path.isfile(name) else "")
+
+
 def check_interpreter(path: str, timeout: float = 15.0):
     """Return (major, minor) if *path* is a working Python interpreter, else None."""
+    resolved = resolve_executable(path)
+    if not resolved:
+        return None
     try:
-        out = subprocess.run(
-            [path, "-c", "import sys; print(sys.version)"],
+        out = subprocess.run(  # nosec B603 - fixed argv, resolved absolute path
+            [resolved, "-c", "import sys; print(sys.version)"],
             capture_output=True, text=True, timeout=timeout, errors="replace",
         )
     except (OSError, subprocess.SubprocessError):
@@ -127,8 +141,6 @@ def find_python(configured: str = ""):
         candidates.append(shlex_split(configured))
     candidates += candidate_interpreters()
     for cmd in candidates:
-        version = check_interpreter(cmd[0] if len(cmd) == 1 else " ".join(cmd))
-        # `py -3.12` etc. need the full list; probe with the list itself:
         version = _check_cmd(cmd)
         if is_sufficient(version):
             return cmd, version
@@ -136,9 +148,12 @@ def find_python(configured: str = ""):
 
 
 def _check_cmd(cmd: list):
+    resolved_cmd = [resolve_executable(cmd[0]), *cmd[1:]]
+    if not resolved_cmd[0]:
+        return None
     try:
-        out = subprocess.run(
-            [*cmd, "-c", "import sys; print(sys.version)"],
+        out = subprocess.run(  # nosec B603 - fixed argv, resolved absolute path
+            [*resolved_cmd, "-c", "import sys; print(sys.version)"],
             capture_output=True, text=True, timeout=15, errors="replace",
         )
     except (OSError, subprocess.SubprocessError):
@@ -201,7 +216,7 @@ def epigrass_version(venv_dir) -> str:
     """Return the installed Epigrass version, or '' if not installed."""
     python = venv_python_path(venv_dir)
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # nosec B603 - fixed argv against the managed venv's interpreter
             [python, "-c",
              "from importlib.metadata import version; print(version('epigrass'))"],
             capture_output=True, text=True, timeout=30, errors="replace",

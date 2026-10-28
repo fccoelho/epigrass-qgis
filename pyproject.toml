@@ -11,7 +11,15 @@ dependencies = []
 dev = [
     "pytest>=8.0",
     "ruff>=0.8",
+    "bandit>=1.8",
 ]
+
+[tool.bandit]
+exclude_dirs = ["dist", "tests"]
+# B404 flags the mere `import subprocess`; the plugin's core job is driving
+# external processes (venv, pip, epirunner, redis). Every call site uses an
+# argv list (no shell) and is audited: see nosec comments in env/ and runner/.
+skips = ["B404"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

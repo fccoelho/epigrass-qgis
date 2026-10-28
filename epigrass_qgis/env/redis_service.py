@@ -82,7 +82,7 @@ class ManagedRedis:
         ]
         log.info("Starting redis: %s", " ".join(cmd))
         log_file = open(self.log_path, "ab")
-        self.proc = subprocess.Popen(
+        self.proc = subprocess.Popen(  # nosec B603 - argv list, no shell; redis-server from configured/auto-discovered absolute path
             cmd, stdout=log_file, stderr=subprocess.STDOUT,
             creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
         )

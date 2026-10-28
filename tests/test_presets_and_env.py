@@ -60,3 +60,32 @@ def test_doctor_config_defaults():
     config = DoctorConfig()
     assert config.redis_port == 6379
     assert config.env_dir.endswith("env")
+
+
+def test_quoted_identifier_rejects_unsafe_names():
+    from epigrass_qgis.sqlite_utils import quoted_identifier
+
+    good = "Model_tiny_Wed_Oct_28_094540_2026"
+    assert quoted_identifier(good) == f'"{good}"'
+    for bad in (
+        'Model"); DROP TABLE users; --',  # classic injection
+        "table;DROP",  # statement separator
+        'quo"te',  # embedded quote must not appear raw
+        "",  # empty
+        "sp ace",  # space is not a valid sqlite identifier char here
+    ):
+        try:
+            quoted_identifier(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"should have rejected {bad!r}")
+
+
+def test_sanitize_model_name():
+    from epigrass_qgis.writer.epg_writer import sanitize_model_name
+
+    assert sanitize_model_name("My Layer: 2024/25") == "My_Layer_2024_25"
+    assert sanitize_model_name('weird"chars;drop') == "weird_chars_drop"
+    assert sanitize_model_name("  --ok-name--  ") == "ok-name"
+    assert sanitize_model_name("///") == "model"
+    assert sanitize_model_name("") == "model"
