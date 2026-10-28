@@ -1,6 +1,13 @@
 # Epigrass for QGIS
 
 [![CI](https://github.com/fccoelho/epigrass-qgis/actions/workflows/ci.yml/badge.svg)](https://github.com/fccoelho/epigrass-qgis/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/fccoelho/epigrass-qgis?sort=semver)](https://github.com/fccoelho/epigrass-qgis/releases/latest)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+[![QGIS](https://img.shields.io/badge/QGIS-3.34%2B-589632?logo=qgis&logoColor=white)](https://qgis.org)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Issues](https://img.shields.io/github/issues/fccoelho/epigrass-qgis)](https://github.com/fccoelho/epigrass-qgis/issues)
+[![Status](https://img.shields.io/badge/status-experimental-orange)](https://github.com/fccoelho/epigrass-qgis/releases)
 
 **Epigrass** is a QGIS plugin that turns any loaded vector layer into a working
 metapopulation epidemic model — build it, simulate it and watch the outbreak
@@ -57,6 +64,13 @@ an **isolated Python environment** so your QGIS installation is never modified.
 - Python ≥ 3.12 available on the system (for the managed simulation
   environment; QGIS's own Python is never used)
 - A reachable Redis server (started automatically by the plugin when possible)
+
+### Releases and downloads
+
+Every push to `main` builds a current plugin zip (CI artifact
+`epigrass-plugin-zip`). Pushing a tag `vX.Y.Z` creates a GitHub release
+attaching `epigrass.vX.Y.Z.zip`, ready for *Plugins → Manage and Install
+Plugins → Install from ZIP* (or for submission to plugins.qgis.org).
 
 ## Quick start
 

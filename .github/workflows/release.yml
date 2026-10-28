@@ -5,27 +5,21 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install qgis-plugin-ci
-        run: pip install qgis-plugin-ci
-      - name: Package and release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          qgis-plugin-ci release "${GITHUB_REF_NAME#v}" \
-            --github-token "$GITHUB_TOKEN"
-      - name: Create GitHub release with the zip
+      - name: Build plugin zip
+        run: python scripts/build_zip.py --out dist
+      - name: Create GitHub release with the plugin zip
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            *.zip
+          files: dist/*.zip
           generate_release_notes: true

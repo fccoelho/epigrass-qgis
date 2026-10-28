@@ -24,6 +24,24 @@ jobs:
       - name: Unit tests
         run: uv run pytest -m "not integration"
 
+  package:
+    name: Build plugin zip
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build plugin zip
+        run: python scripts/build_zip.py --out dist
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: epigrass-plugin-zip
+          path: dist/*.zip
+          retention-days: 30
+
   qgis:
     name: QGIS ${{ matrix.qgis }} import smoke test
     runs-on: ubuntu-latest
