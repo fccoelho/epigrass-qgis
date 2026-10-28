@@ -21,6 +21,10 @@ markers = [
     "integration: tests that require Epigrass installed",
 ]
 
+[tool.qgis-plugin-ci]
+plugin_path = "epigrass_qgis"
+github_org_repo = "fccoelho/epigrass-qgis"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

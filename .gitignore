@@ -22,3 +22,6 @@ build/
 # QGIS dev artefacts
 *.qgz~
 plugin_zip/
+
+# local packaging output
+/*.zip

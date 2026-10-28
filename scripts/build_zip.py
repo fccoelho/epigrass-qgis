@@ -33,10 +33,10 @@ EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
 
 
 def read_version(repo: Path) -> str:
-    text = (repo / METADATA).read_text(encoding="utf-8")
+    text = (repo / SOURCE_PACKAGE / METADATA).read_text(encoding="utf-8")
     match = re.search(r"^version=(.+)$", text, flags=re.MULTILINE)
     if not match:
-        sys.exit(f"ERROR: 'version=' not found in {METADATA}")
+        sys.exit(f"ERROR: 'version=' not found in {SOURCE_PACKAGE}/{METADATA}")
     return match.group(1).strip()
 
 
@@ -49,7 +49,7 @@ def collect_files(repo: Path) -> list:
         if EXCLUDE_PARTS & set(path.parts) or path.suffix in EXCLUDE_SUFFIXES:
             continue
         files.append(path)
-    for extra in (METADATA, "LICENSE", "README.md"):
+    for extra in ("LICENSE", "README.md"):
         if (repo / extra).is_file():
             files.append(repo / extra)
     return files
