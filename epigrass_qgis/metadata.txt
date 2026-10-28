@@ -4,25 +4,14 @@ qgisMinimumVersion=3.34
 qgisMaximumVersion=3.99
 description=Build and simulate metapopulation epidemiological models (SIR, SEIR, SEIS, SIS, SI) directly from your QGIS layers.
 about=Epigrass for QGIS brings the Epigrass metapopulation simulation engine into QGIS.
-
-Turn any loaded vector layer (municipalities, health zones, census tracts...) into a
-spatial epidemic model in a few clicks:
-
-* Map layer columns to site name, population and geocode
-* Build the connectivity network by shared-border adjacency, k-nearest neighbours,
-  distance threshold or from flow columns in the attribute table
-* Choose a compartmental model (SIR, SEIR, SEIS, SIS, SI, continuous variants or a
-  CustomModel.py) with parameter presets for common diseases
-* Seed the outbreak by clicking a feature on the map
-* Run the simulation with epirunner in an isolated Python environment managed by the
-  plugin (QGIS's own Python is never touched)
-* Watch the epidemic spread on your map: results are loaded back as styled GeoPackage
-  layers and an animated temporal layer for the QGIS Temporal Controller
-
-The plugin requires a one-time setup ("Environment Doctor") which provisions a
-dedicated Python >= 3.12 environment with Epigrass and checks that a Redis server
-(required by the Epigrass engine) is reachable, starting one automatically when
-possible.
+ Turn any loaded vector layer (municipalities, health zones, census tracts...) into a spatial epidemic model in a few clicks:
+ * Map layer columns to site name, population and geocode
+ * Build the connectivity network by shared-border adjacency, k-nearest neighbours, distance threshold, or from flow columns in the attribute table
+ * Choose a compartmental model (SIR, SEIR, SEIS, SIS, SI, continuous variants or a CustomModel.py) with parameter presets for common diseases
+ * Seed the outbreak by clicking a feature on the map, add vaccination campaigns and transport options
+ * Run the simulation with epirunner in an isolated Python environment managed by the plugin (QGIS's own Python is never touched)
+ * Watch the epidemic spread on your map: results are loaded back as styled GeoPackage layers and an animated temporal layer for the QGIS Temporal Controller
+ The plugin requires a one-time setup ("Environment Doctor") which provisions a dedicated Python >= 3.12 environment with Epigrass and checks that a Redis server (required by the Epigrass engine) is reachable, starting one automatically when possible.
 version=0.1.0
 author=Flavio Codeco Coelho
 email=fccoelho@gmail.com
