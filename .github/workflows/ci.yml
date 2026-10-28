@@ -38,12 +38,49 @@ jobs:
       - name: Import plugin with QGIS python
         run: |
           python3 - <<'EOF'
-          import pyplugin_installer  # noqa: F401  (ensures QGIS env is usable)
+          import importlib
           import sys
+          import traceback
+
           sys.path.insert(0, ".")
-          # Syntax/import check of every module without a running QGIS app:
+
+          # 1. Syntax check under the image's Python (3.34 ships py3.9:
+          #    guards against accidentally using newer syntax).
           import compileall
-          ok = compileall.compile_dir("epigrass_qgis", quiet=1)
-          assert ok, "Compilation failed"
-          print("All plugin modules compile under QGIS Python", sys.version)
+          assert compileall.compile_dir("epigrass_qgis", quiet=1), "Compilation failed"
+
+          # 2. Full import of every module when the QGIS bindings are
+          #    importable without a running app (entrypoint-dependent).
+          try:
+              import qgis.core  # noqa: F401
+          except ImportError:
+              print("qgis bindings not on default path; syntax-only check")
+              sys.exit(0)
+
+          modules = [
+              "epigrass_qgis.defs",
+              "epigrass_qgis.env.doctor",
+              "epigrass_qgis.env.python_env",
+              "epigrass_qgis.env.redis_service",
+              "epigrass_qgis.writer.epg_writer",
+              "epigrass_qgis.builder.presets",
+              "epigrass_qgis.builder.network_builder",
+              "epigrass_qgis.builder.layer_export",
+              "epigrass_qgis.builder.seed_picker",
+              "epigrass_qgis.builder.wizard",
+              "epigrass_qgis.runner.task",
+              "epigrass_qgis.results.loader",
+              "epigrass_qgis.results.temporal",
+              "epigrass_qgis.settings",
+              "epigrass_qgis.plugin",
+          ]
+          failed = []
+          for name in modules:
+              try:
+                  importlib.import_module(name)
+              except Exception:
+                  traceback.print_exc()
+                  failed.append(name)
+          assert not failed, f"Import failed: {failed}"
+          print("All plugin modules import under QGIS Python", sys.version.split()[0])
           EOF
