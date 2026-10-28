@@ -1,0 +1,42 @@
+[project]
+name = "epigrass-qgis"
+version = "0.1.0"
+description = "Development tooling for the Epigrass QGIS plugin (the plugin itself runs inside QGIS)"
+readme = "README.md"
+license = { text = "GPLv3" }
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+markers = [
+    "integration: tests that require Epigrass installed",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["epigrass_qgis/icons"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "UP", "RUF"]
+ignore = [
+    "N802",  # Qt method names (canvasReleaseEvent...) follow the Qt API
+    "N999",  # plugin module names follow QGIS conventions
+    "UP007", # keep Optional-style unions for QGIS (3.x) compatibility
+    "UP045", # same
+    "RUF012",# mutable class attributes are fine for Qt widgets
+    "E501",  # long lines allowed in generated templates
+]
+
+[tool.ruff.lint.per-file-ignores]
+# QGIS-dependent modules cannot be imported during lint-time test collection
+"tests/test_integration_epigrass.py" = ["E402"]

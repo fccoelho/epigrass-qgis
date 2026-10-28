@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dev tooling
+        run: uv sync --group dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Unit tests
+        run: uv run pytest -m "not integration"
+
+  qgis:
+    name: QGIS ${{ matrix.qgis }} import smoke test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        qgis: ["3.34", "3.40"]
+    container:
+      image: qgis/qgis:${{ matrix.qgis }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import plugin with QGIS python
+        run: |
+          python3 - <<'EOF'
+          import pyplugin_installer  # noqa: F401  (ensures QGIS env is usable)
+          import sys
+          sys.path.insert(0, ".")
+          # Syntax/import check of every module without a running QGIS app:
+          import compileall
+          ok = compileall.compile_dir("epigrass_qgis", quiet=1)
+          assert ok, "Compilation failed"
+          print("All plugin modules compile under QGIS Python", sys.version)
+          EOF
